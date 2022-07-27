@@ -1,0 +1,19 @@
+{
+    "id": "pinephone",
+    "name": "PinePhone Integration",
+    "version": "0.01",
+    "description": "Connect and stream data to/from PinePhone and PinePhone Pro devices",
+    "readme":"README.md",
+    "icon": "app.png",
+    "screenshots": [{"url":"screenshot.png"}],
+    "type": "app",
+    "tags": "tool,system,pinephone,messages,notifications",
+    "supports": ["BANGLEJS2"],
+    "allow_emulator": true,
+    "storage": [
+        {"name":"pinephone.app.js","url":"app.js"},
+        {"name":"pinephone.img","url":"app-icon.js","evaluate":true},
+        {"name":"pinephone.settings.js","url":"settings.js"},
+        {"name":"pinephone.boot.js","url":"boot.js"}
+    ]
+}
