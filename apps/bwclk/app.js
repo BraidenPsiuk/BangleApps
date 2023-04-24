@@ -6,7 +6,7 @@
 const locale = require('locale');
 const storage = require('Storage');
 const clock_info = require("clock_info");
-
+const widget_utils = require("widget_utils");
 
 /************************************************
  * Globals
@@ -100,12 +100,46 @@ let imgLock = function() {
  * Clock Info
  */
 let clockInfoItems = clock_info.load();
+
+// Add some custom clock-infos
+let weekOfYear = function() {
+  var date = new Date();
+  date.setHours(0, 0, 0, 0);
+  // Thursday in current week decides the year.
+  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+  // January 4 is always in week 1.
+  var week1 = new Date(date.getFullYear(), 0, 4);
+  // Adjust to Thursday in week 1 and count number of weeks from date to week1.
+  return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
+                        - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+clockInfoItems[0].items.unshift({ name : "weekofyear",
+  get : function() { return { text : "Week " + weekOfYear(),
+                              img : null}},
+  show : function() {},
+  hide : function() {},
+})
+
+// Empty for large time
+clockInfoItems[0].items.unshift({ name : "nop",
+  get : function() { return { text : null,
+                              img : null}},
+  show : function() {},
+  hide : function() {},
+})
+
+
+
 let clockInfoMenu = clock_info.addInteractive(clockInfoItems, {
+  app: "bwclk",
   x : 0,
   y: 135,
-  w: W,
+  w: W+1,
   h: H-135,
   draw : (itm, info, options) => {
+    var hideClkInfo = info.text == null;
+
     g.setColor(g.theme.fg);
     g.fillRect(options.x, options.y, options.x+options.w, options.y+options.h);
 
@@ -113,8 +147,17 @@ let clockInfoMenu = clock_info.addInteractive(clockInfoItems, {
     g.setColor(g.theme.bg);
 
     if (options.focus){
-      g.drawRect(options.x, options.y, options.x+options.w-2, options.y+options.h-1); // show if focused
-      g.drawRect(options.x+1, options.y+1, options.x+options.w-3, options.y+options.h-2); // show if focused
+      var y = hideClkInfo ? options.y+20 : options.y+2;
+      var h = hideClkInfo ? options.h-20 : options.h-2;
+      g.drawRect(options.x, y, options.x+options.w-2, y+h-1); // show if focused
+      g.drawRect(options.x+1, y+1, options.x+options.w-3, y+h-2); // show if focused
+    }
+
+    // In case we hide the clkinfo, we show the time again as the time should
+    // be drawn larger.
+    if(hideClkInfo){
+      drawTime();
+      return;
     }
 
     // Set text and font
@@ -137,6 +180,11 @@ let clockInfoMenu = clock_info.addInteractive(clockInfoItems, {
       g.drawImage(image, midx-parseInt(imgWidth*1.3/2)-parseInt(strWidth/2), options.y+6, {scale: scale});
     }
     g.drawString(text, midx+parseInt(imgWidth*1.3/2), options.y+20);
+
+    // In case we are in focus and the focus box changes (fullscreen yes/no)
+    // we draw the time again. Otherwise it could happen that a while line is
+    // not cleared correctly.
+    if(options.focus) drawTime();
   }
 });
 
@@ -187,6 +235,8 @@ let drawDate = function() {
 
 
 let drawTime = function() {
+  var hideClkInfo = clockInfoMenu.menuA == 0 && clockInfoMenu.menuB == 0;
+
   // Draw background
   var y1 = getLineY();
   var y = y1;
@@ -199,13 +249,19 @@ let drawTime = function() {
   var timeStr = hours + colon + minutes;
 
   // Set y coordinates correctly
-  y += parseInt((H - y)/2)-10;
+  y += parseInt((H - y)/2) + 5;
 
-  // Clear region
+  if (hideClkInfo){
+    g.setLargeFont();
+  } else {
+    y -= 15;
+    g.setMediumFont();
+  }
+
+  // Clear region and draw time
   g.setColor(g.theme.fg);
-  g.fillRect(0,y1,W,y+20);
+  g.fillRect(0,y1,W,y+20 + (hideClkInfo ? 1 : 0) + (isFullscreen() ? 3 : 0));
 
-  g.setMediumFont();
   g.setColor(g.theme.bg);
   g.setFontAlign(0,0);
   g.drawString(timeStr, W/2, y);
@@ -222,7 +278,7 @@ let drawLock = function() {
 
 let drawWidgets = function() {
   if(isFullscreen()){
-    for (let wd of WIDGETS) {wd.draw=()=>{};wd.area="";}
+    widget_utils.hide();
   } else {
     Bangle.drawWidgets();
   }
@@ -263,13 +319,19 @@ let lockListenerBw = function(isLocked) {
   if(!isLocked && settings.screen.toLowerCase() == "dynamic"){
     // If we have to show the widgets again, we load it from our
     // cache and not through Bangle.loadWidgets as its much faster!
-    for (let wd of WIDGETS) {wd.draw=wd._draw;wd.area=wd._area;}
+    widget_utils.show();
   }
 
   draw();
 };
 Bangle.on('lock', lockListenerBw);
 
+let charging = function(charging){
+  // Jump to battery
+  clockInfoMenu.setItem(0, 2);
+  drawTime();
+}
+Bangle.on('charging', charging);
 
 let kill = function(){
   clockInfoMenu.remove();
@@ -294,21 +356,19 @@ Bangle.setUI({
     // Called to unload all of the clock app
     Bangle.removeListener('lcdPower', lcdListenerBw);
     Bangle.removeListener('lock', lockListenerBw);
+    Bangle.removeListener('charging', charging);
     if (drawTimeout) clearTimeout(drawTimeout);
     drawTimeout = undefined;
     // save settings
     kill();
     E.removeListener("kill", kill);
     g.setTheme(themeBackup);
+    widget_utils.show();
   }
 });
 
 // Load widgets and draw clock the first time
 Bangle.loadWidgets();
-
-// Cache draw function for dynamic screen to hide / show widgets
-// Bangle.loadWidgets() could also be called later on but its much slower!
-for (let wd of WIDGETS) {wd._draw=wd.draw; wd._area=wd.area;}
 
 // Draw first time
 draw();

@@ -11,7 +11,7 @@
            Bangle.setHRMPower(1, "health");
            setTimeout(()=>{
              Bangle.setHRMPower(0, "health");
-           }, (i * 200000) + 60000);
+           }, 60000);
          }, (i * 200000));
        }
      }
@@ -105,7 +105,7 @@ function handleStepGoalNotification() {
     if (!settings.stepGoalNotificationDate || settings.stepGoalNotificationDate < now) { // notification not yet shown today?
       Bangle.buzz(200, 0.5);
       require("notify").show({
-          title : /*LANG*/ settings.stepGoal + " steps",
+          title : settings.stepGoal + /*LANG*/ " steps",
           body : /*LANG*/ "You reached your step goal!",
           icon : atob("DAyBABmD6BaBMAsA8BCBCBCBCA8AAA==")
       });

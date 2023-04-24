@@ -22,11 +22,14 @@ global.Const = {
 };
 
 var apps = [];
+var device = { id : DEVICEID, appsInstalled : [] };
 
 // call with {DEVICEID:"BANGLEJS/BANGLEJS2"}
 exports.init = function(options) {
-  if (options.DEVICEID)
+  if (options.DEVICEID) {
     DEVICEID = options.DEVICEID;
+    device.id = options.DEVICEID;
+  }
   // Load app metadata
   var dirs = require("fs").readdirSync(APPSDIR, {withFileTypes: true});
   dirs.forEach(dir => {
@@ -67,10 +70,28 @@ function fileGetter(url) {
 }
 
 exports.getAppFiles = function(app) {
-  return AppInfo.getFiles(app, {
+  var allFiles = [];
+  var uploadOptions = {
+    apps : apps,
+    needsApp : app => {
+      if (app.provides_modules) {
+        if (!app.files) app.files="";
+        app.files = app.files.split(",").concat(app.provides_modules).join(",");
+      }
+      return AppInfo.getFiles(app, {
+        fileGetter:fileGetter,
+        settings : SETTINGS,
+        device : { id : DEVICEID }
+      }).then(files => { allFiles = allFiles.concat(files); return app; });
+    }
+  };
+  return AppInfo.checkDependencies(app, device, uploadOptions).then(() => AppInfo.getFiles(app, {
     fileGetter:fileGetter,
     settings : SETTINGS,
-    device : { id : DEVICEID }
+    device : device
+  })).then(files => {
+    allFiles = allFiles.concat(files);
+    return allFiles;
   });
 };
 
