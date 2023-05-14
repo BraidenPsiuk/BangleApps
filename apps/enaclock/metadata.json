@@ -4,7 +4,9 @@
   "version":"0.01",
   "description": "ENA watchface for Bangle.js 2",
   "icon": "app.png",
-  "tags": "",
+  "screenshots": [{"url":"img/scenes/hmb/ec_hmb-l0.png"}, {"url":"img/scenes/dgg/ec_dgg-l0.png"}],
+  "type": "clock",
+  "tags": "clock",
   "supports" : ["BANGLEJS2"],  
   "readme": "README.md",
   "storage": [
