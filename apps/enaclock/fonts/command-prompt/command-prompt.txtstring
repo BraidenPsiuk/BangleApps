@@ -1,0 +1,9 @@
+Graphics.prototype.setFontCommandPrompt = function() {
+  // Actual height 9 (11 - 3)
+  return this.setFontCustom(
+    E.toString(require('heatshrink').decompress(atob('gEwAIQFDsEA4EBwEDgEGgEMgEYCAUP8Ef+EQqETyEUiAHBBYIPBgkQAIMP+ALBgEQAIQjBmEcuEQ6ERyEfmEOHoUIkEYmERiABBDoMOFIRFCwEGwEMDYItDyAPBj8gEoIdDiJPBDoUH8BFBjINEgANCNIIBBBIMTFIMAjxzCHoIxBiYZBHIRHDhw5BBYI5BDYPAh4bChlgAIIFBA'))),
+    46,
+    atob("AwkIBwcHCAcHBwcHAw=="),
+    16|65536
+  );
+}
